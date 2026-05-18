@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kirka.io Bounty Hunts</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-zinc-950">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      const [theme, setTheme] = useState("dark");
+      const [currentPage, setCurrentPage] = useState("home");
+      const [username, setUsername] = useState("");
+      const [onlinePlayers, setOnlinePlayers] = useState([]);
+      const [completedBounties, setCompletedBounties] = useState([]);
+      const [leaderboard, setLeaderboard] = useState([]);
+      const [teams, setTeams] = useState([]);
+      const [reports, setReports] = useState([]);
+      const [accounts, setAccounts] = useState([]);
+      const [currentUser, setCurrentUser] = useState(null);
+      const [isAdmin, setIsAdmin] = useState(false);
+
+      const [loginForm, setLoginForm] = useState({
+        username: "",
+        password: "",
+      });
+
+      const [teamForm, setTeamForm] = useState({
+        name: "",
+        leader: "",
+      });
+
+      const [reportForm, setReportForm] = useState({
+        reportedPlayer: "",
+        reason: "",
+        evidence: "",
+      });
+
+      const [bounties, setBounties] = useState([
+        {
+          player: "ShadowVex",
+          reward: "5000",
+          difficulty: "Hard",
+          mode: "FFA",
+          team: "Crimson Wolves",
+        },
+        {
+          player: "PhantomStrike",
+          reward: "7500",
+          difficulty: "Hard",
+          mode: "Team Deathmatch",
+          team: "Shadow Assassins",
+        },
+        {
+          player: "NeonBlaze",
+          reward: "3000",
+          difficulty: "Medium",
+          mode: "FFA",
+          team: "Neon Reapers",
+        },
+      ]);
+
+      const getLevel = (wins) => {
+        if (wins >= 10) return "Legend";
+        if (wins >= 5) return "Elite";
+        return "Assassin";
+      };
+
+      const getBadge = (wins) => {
+        return wins >= 5 ? "Trusted Hunter" : "None";
+      };
+
+      const joinWebsite = () => {
+        if (!username) return;
+
+        const player = {
+          name: username,
+          joinedAt: new Date().toLocaleTimeString(),
+        };
+
+        setOnlinePlayers([...onlinePlayers, player]);
+
+        setLeaderboard([
+          {
+            player: username,
+            streak: Math.floor(Math.random() * 25 + 1),
+            completed: Math.floor(Math.random() * 20 + 1),
+          },
+          ...leaderboard,
+        ]);
+
+        setBounties([
+          {
+            player: username,
+            reward: `${Math.floor(Math.random() * 9000 + 1000)}`,
+            difficulty: "Medium",
+            mode: "Team Deathmatch",
+            team: "Website Hunters",
+          },
+          ...bounties,
+        ]);
+
+        setUsername("");
+      };
+
+      const completeBounty = (index) => {
+        const bounty = bounties[index];
+        const reward = parseInt(bounty.reward);
+        const finalReward = Math.floor(reward * 0.9);
+
+        setCompletedBounties([
+          {
+            ...bounty,
+            finalReward,
+            splitReward: Math.floor(finalReward / 3),
+            pending: true,
+            completedAt: new Date().toLocaleString(),
+          },
+          ...completedBounties,
+        ]);
+
+        if (currentUser) {
+          const wins = currentUser.wins + 1;
+
+          setCurrentUser({
+            ...currentUser,
+            wins,
+            level: getLevel(wins),
+            badge: getBadge(wins),
+            earnings: currentUser.earnings + finalReward,
+          });
+        }
+
+        setBounties(bounties.filter((_, i) => i !== index));
+      };
+
+      const createTeam = () => {
+        if (!teamForm.name || !teamForm.leader) return;
+
+        setTeams([
+          {
+            name: teamForm.name,
+            leader: teamForm.leader,
+            members: [teamForm.leader],
+          },
+          ...teams,
+        ]);
+
+        setTeamForm({ name: "", leader: "" });
+      };
+
+      const joinTeam = (teamName) => {
+        if (!username) return;
+
+        setTeams(
+          teams.map((team) => {
+            if (team.name === teamName) {
+              return {
+                ...team,
+                members: [...new Set([...team.members, username])],
+              };
+            }
+            return team;
+          })
+        );
+      };
+
+      const submitReport = () => {
+        if (!reportForm.reportedPlayer || !reportForm.reason) return;
+
+        setReports([
+          {
+            ...reportForm,
+            submittedAt: new Date().toLocaleString(),
+          },
+          ...reports,
+        ]);
+
+        setReportForm({
+          reportedPlayer: "",
+          reason: "",
+          evidence: "",
+        });
+      };
+
+      const loginAccount = () => {
+        if (!loginForm.username || !loginForm.password) return;
+
+        const account = {
+          username: loginForm.username,
+          wins: 0,
+          earnings: 0,
+          clan: "No Clan",
+          level: "Assassin",
+          badge: "None",
+        };
+
+        setAccounts([...accounts, account]);
+        setCurrentUser(account);
+
+        if (loginForm.username.toLowerCase() === "admin") {
+          setIsAdmin(true);
+        }
+
+        setLoginForm({ username: "", password: "" });
+      };
+
+      const banAccount = (username) => {
+        alert(`${username} has been banned.`);
+      };
+
+      return (
+        <div className={theme === "dark" ? "min-h-screen bg-zinc-950 text-white p-8" : "min-h-screen bg-zinc-100 text-black p-8"}>
+          <div className="max-w-7xl mx-auto">
+            <h1 className="text-5xl font-black text-orange-400 mb-6">
+              Kirka.io Bounty Hunts
+            </h1>
+
+            <div className="flex flex-wrap gap-3 mb-8">
+              {[
+                "home",
+                "leaderboard",
+                "teams",
+                "reports",
+                "account",
+                "admin",
+              ].map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-5 py-2 rounded-xl font-bold capitalize transition ${
+                    currentPage === page
+                      ? "bg-indigo-600 text-white"
+                      : "bg-zinc-800 hover:bg-zinc-700"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="bg-white text-black px-5 py-2 rounded-xl font-bold hover:bg-gray-200"
+              >
+                Toggle Theme
+              </button>
+            </div>
+
+            {currentPage === "home" && (
+              <div>
+                <div className="bg-zinc-900 rounded-3xl p-6 mb-8">
+                  <h2 className="text-3xl font-bold text-indigo-400 mb-4">
+                    Join Website
+                  </h2>
+
+                  <div className="flex gap-4">
+                    <input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && joinWebsite()}
+                      placeholder="Username"
+                      className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500"
+                    />
+
+                    <button
+                      onClick={joinWebsite}
+                      className="bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-xl font-bold"
+                    >
+                      Join
+                    </button>
+                  </div>
+                </div>
+
+                <h2 className="text-3xl font-bold text-orange-400 mb-6">Active Bounties</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {bounties.map((bounty, index) => (
+                    <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 hover:border-orange-500 transition">
+                      <h3 className="text-2xl font-bold text-orange-300 mb-3">
+                        {bounty.player}
+                      </h3>
+
+                      <div className="space-y-2 text-zinc-300">
+                        <p><span className="text-yellow-400">Reward:</span> {bounty.reward} KR</p>
+                        <p><span className="text-yellow-400">Difficulty:</span> {bounty.difficulty}</p>
+                        <p><span className="text-yellow-400">Mode:</span> {bounty.mode}</p>
+                        <p><span className="text-yellow-400">Team:</span> {bounty.team}</p>
+                      </div>
+
+                      <button
+                        onClick={() => completeBounty(index)}
+                        className="w-full mt-6 bg-green-600 hover:bg-green-500 py-3 rounded-2xl font-bold transition"
+                      >
+                        Complete Bounty
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {onlinePlayers.length > 0 && (
+                  <div className="mt-12">
+                    <h2 className="text-3xl font-bold text-purple-400 mb-6">Online Players ({onlinePlayers.length})</h2>
+                    <div className="bg-zinc-900 rounded-3xl p-6">
+                      <div className="space-y-3">
+                        {onlinePlayers.map((player, index) => (
+                          <div key={index} className="flex justify-between items-center bg-zinc-800 p-4 rounded-xl">
+                            <span className="text-lg font-bold">{player.name}</span>
+                            <span className="text-zinc-400 text-sm">Joined: {player.joinedAt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {completedBounties.length > 0 && (
+                  <div className="mt-12">
+                    <h2 className="text-3xl font-bold text-green-400 mb-6">Completed Bounties</h2>
+                    <div className="space-y-4">
+                      {completedBounties.map((bounty, index) => (
+                        <div key={index} className="bg-zinc-900 rounded-3xl p-6 border border-green-800">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="text-2xl font-bold text-green-300">{bounty.player}</h3>
+                              <p className="text-zinc-400">Completed: {bounty.completedAt}</p>
+                              <p className="text-yellow-400 mt-2">Final Reward: {bounty.finalReward} KR (90% of {bounty.reward})</p>
+                            </div>
+                            <span className={`px-4 py-2 rounded-xl font-bold ${bounty.pending ? "bg-yellow-600" : "bg-green-600"}`}>
+                              {bounty.pending ? "Pending" : "Completed"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentPage === "leaderboard" && (
+              <div>
+                <h2 className="text-4xl font-black text-yellow-400 mb-6">
+                  Live Leaderboard
+                </h2>
+
+                {leaderboard.length === 0 ? (
+                  <div className="bg-zinc-900 rounded-3xl p-6 text-center text-zinc-400">
+                    No players yet. Join the website to appear on the leaderboard!
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {leaderboard.sort((a, b) => b.streak - a.streak).map((player, index) => (
+                      <div key={index} className="bg-zinc-900 rounded-3xl p-6 flex justify-between items-center hover:bg-zinc-800 transition">
+                        <div>
+                          <h3 className="text-2xl font-bold">
+                            #{index + 1} {player.player}
+                          </h3>
+                          <p className="text-zinc-400">Completed Hunts: {player.completed}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-yellow-400 text-2xl font-bold">{player.streak} Streak</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentPage === "teams" && (
+              <div>
+                <h2 className="text-4xl font-black text-blue-400 mb-6">Teams Management</h2>
+
+                <div className="bg-zinc-900 rounded-3xl p-6 mb-8">
+                  <h3 className="text-2xl font-bold text-indigo-400 mb-4">Create Team</h3>
+
+                  <div className="space-y-4">
+                    <input
+                      value={teamForm.name}
+                      onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+                      placeholder="Team Name"
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500"
+                    />
+
+                    <input
+                      value={teamForm.leader}
+                      onChange={(e) => setTeamForm({ ...teamForm, leader: e.target.value })}
+                      placeholder="Leader Username"
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500"
+                    />
+
+                    <button
+                      onClick={createTeam}
+                      className="w-full bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl font-bold transition"
+                    >
+                      Create Team
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-bold text-blue-300 mb-6">Active Teams</h3>
+                {teams.length === 0 ? (
+                  <div className="bg-zinc-900 rounded-3xl p-6 text-center text-zinc-400">
+                    No teams yet. Create one to get started!
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {teams.map((team, index) => (
+                      <div key={index} className="bg-zinc-900 rounded-3xl p-6 border border-blue-800">
+                        <h3 className="text-2xl font-bold text-blue-300 mb-4">{team.name}</h3>
+                        <p className="text-zinc-400 mb-4">Leader: <span className="text-white font-bold">{team.leader}</span></p>
+                        <p className="text-zinc-400 mb-4">Members: {team.members.length}</p>
+                        <ul className="space-y-2 mb-4">
+                          {team.members.map((member, i) => (
+                            <li key={i} className="text-zinc-300 flex items-center">
+                              <span className="inline-block w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+                              {member}
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          onClick={() => joinTeam(team.name)}
+                          className="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded-xl font-bold transition"
+                        >
+                          Join Team
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentPage === "reports" && (
+              <div>
+                <h2 className="text-4xl font-black text-red-400 mb-6">Report Player</h2>
+
+                <div className="bg-zinc-900 rounded-3xl p-6 mb-8">
+                  <h3 className="text-2xl font-bold text-red-400 mb-4">Submit Report</h3>
+
+                  <div className="space-y-4">
+                    <input
+                      value={reportForm.reportedPlayer}
+                      onChange={(e) => setReportForm({ ...reportForm, reportedPlayer: e.target.value })}
+                      placeholder="Reported Player Username"
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500"
+                    />
+
+                    <select
+                      value={reportForm.reason}
+                      onChange={(e) => setReportForm({ ...reportForm, reason: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white"
+                    >
+                      <option value="">Select Reason</option>
+                      <option value="Cheating">Cheating</option>
+                      <option value="Harassment">Harassment</option>
+                      <option value="Spam">Spam</option>
+                      <option value="Inappropriate Behavior">Inappropriate Behavior</option>
+                    </select>
+
+                    <textarea
+                      value={reportForm.evidence}
+                      onChange={(e) => setReportForm({ ...reportForm, evidence: e.target.value })}
+                      placeholder="Evidence/Description (optional)"
+                      rows="4"
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500"
+                    ></textarea>
+
+                    <button
+                      onClick={submitReport}
+                      className="w-full bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl font-bold transition"
+                    >
+                      Submit Report
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-2xl font-bold text-red-300 mb-6">Report History</h3>
+                {reports.length === 0 ? (
+                  <div className="bg-zinc-900 rounded-3xl p-6 text-center text-zinc-400">
+                    No reports yet.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reports.map((report, index) => (
+                      <div key={index} className="bg-zinc-900 rounded-3xl p-6 border border-red-800">
+                        <h3 className="text-xl font-bold text-red-300">{report.reportedPlayer}</h3>
+                        <p className="text-zinc-400 mt-2">Reason: <span className="text-white">{report.reason}</span></p>
+                        {report.evidence && <p className="text-zinc-400 mt-2">Evidence: <span className="text-white">{report.evidence}</span></p>}
+                        <p className="text-zinc-500 text-sm mt-4">Submitted: {report.submittedAt}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentPage === "account" && (
+              <div>
+                <h2 className="text-4xl font-black text-cyan-400 mb-6">Account Management</h2>
+
+                {!currentUser ? (
+                  <div className="bg-zinc-900 rounded-3xl p-6 mb-8">
+                    <h3 className="text-2xl font-bold text-cyan-400 mb-4">Login</h3>
+
+                    <div className="space-y-4">
+                      <input
+                        value={loginForm.username}
+                        onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                        placeholder="Username"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500"
+                      />
+
+                      <input
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                        type="password"
+                        placeholder="Password"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500"
+                      />
+
+                      <button
+                        onClick={loginAccount}
+                        className="w-full bg-cyan-600 hover:bg-cyan-500 px-6 py-3 rounded-xl font-bold transition"
+                      >
+                        Login
+                      </button>
+
+                      <p className="text-zinc-400 text-sm text-center">
+                        💡 Tip: Try username "admin" to see admin features
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-900 rounded-3xl p-6 mb-8 border border-cyan-600">
+                    <div className="flex justify-between items-start mb-6">
+                      <div>
+                        <h3 className="text-3xl font-bold text-cyan-300">{currentUser.username}</h3>
+                        <p className="text-zinc-400 mt-2">Level: <span className="text-yellow-400 font-bold">{currentUser.level}</span></p>
+                      </div>
+                      <button
+                        onClick={() => setCurrentUser(null)}
+                        className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl font-bold transition"
+                      >
+                        Logout
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-zinc-800 rounded-xl p-4">
+                        <p className="text-zinc-400 text-sm">Wins</p>
+                        <p className="text-2xl font-bold text-green-400">{currentUser.wins}</p>
+                      </div>
+                      <div className="bg-zinc-800 rounded-xl p-4">
+                        <p className="text-zinc-400 text-sm">Earnings</p>
+                        <p className="text-2xl font-bold text-yellow-400">{currentUser.earnings} KR</p>
+                      </div>
+                      <div className="bg-zinc-800 rounded-xl p-4">
+                        <p className="text-zinc-400 text-sm">Clan</p>
+                        <p className="text-xl font-bold text-blue-400">{currentUser.clan}</p>
+                      </div>
+                      <div className="bg-zinc-800 rounded-xl p-4">
+                        <p className="text-zinc-400 text-sm">Badge</p>
+                        <p className="text-xl font-bold text-purple-400">{currentUser.badge}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentPage === "admin" && (
+              <div>
+                <h2 className="text-4xl font-black text-red-500 mb-6">Admin Panel</h2>
+
+                {!isAdmin ? (
+                  <div className="bg-red-900 border border-red-600 rounded-3xl p-6 text-center">
+                    <p className="text-xl font-bold text-red-200">
+                      🔒 Admin Access Required
+                    </p>
+                    <p className="text-red-300 mt-2">
+                      Login with admin account to access this panel.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                      <div className="bg-zinc-900 rounded-3xl p-6 border border-red-800">
+                        <p className="text-zinc-400 text-sm">Total Accounts</p>
+                        <p className="text-4xl font-bold text-red-400">{accounts.length}</p>
+                      </div>
+                      <div className="bg-zinc-900 rounded-3xl p-6 border border-red-800">
+                        <p className="text-zinc-400 text-sm">Total Reports</p>
+                        <p className="text-4xl font-bold text-red-400">{reports.length}</p>
+                      </div>
+                      <div className="bg-zinc-900 rounded-3xl p-6 border border-red-800">
+                        <p className="text-zinc-400 text-sm">Active Teams</p>
+                        <p className="text-4xl font-bold text-red-400">{teams.length}</p>
+                      </div>
+                    </div>
+
+                    <h3 className="text-2xl font-bold text-red-300 mb-4">Accounts</h3>
+                    {accounts.length === 0 ? (
+                      <div className="bg-zinc-900 rounded-3xl p-6 text-center text-zinc-400">
+                        No accounts registered yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {accounts.map((acc, index) => (
+                          <div key={index} className="bg-zinc-900 rounded-2xl p-4 flex justify-between items-center border border-zinc-800">
+                            <div>
+                              <p className="text-lg font-bold">{acc.username}</p>
+                              <p className="text-zinc-400 text-sm">Wins: {acc.wins} | Earnings: {acc.earnings} KR</p>
+                            </div>
+                            <button
+                              onClick={() => banAccount(acc.username)}
+                              className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-xl font-bold transition"
+                            >
+                              Ban
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>
